@@ -516,13 +516,6 @@ public:
         return size;
     }
 
-    // Receive a single character.
-    int64_t recv(char &buffer)
-    {
-        auto size = internal_recv(&buffer, 1);
-        return size;
-    }
-
     // Sized transfer.
     std::expected<void, Error> readSized(Response &r, const UserCallback &cb)
     {
