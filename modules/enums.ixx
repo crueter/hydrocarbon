@@ -7,6 +7,7 @@ module;
 #include <format>
 #include <string>
 #include <string_view>
+#include <utility>
 
 export module hydrocarbon:enums;
 
@@ -168,7 +169,6 @@ struct ConnectOptions {
 
     // Initial connection timeout.
     std::chrono::milliseconds connectionTimeout = 0ms;
-
 };
 
 } // namespace hydro
@@ -234,7 +234,7 @@ export {
     struct std::formatter<hydro::Status> : std::formatter<std::string_view> {
         auto format(const hydro::Status s, std::format_context &ctx) const
         {
-            std::string_view name;
+            std::string name;
 
             // This will not always match the status line, but is close enough.
             switch (s) {
@@ -426,6 +426,9 @@ export {
                 break;
             case hydro::Status::NetworkAuthenticationRequired:
                 name = "511 Network Authentication Required";
+                break;
+            default:
+                name = std::to_string(std::to_underlying(s));
                 break;
             }
 

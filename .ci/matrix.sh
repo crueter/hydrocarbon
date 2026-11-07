@@ -89,7 +89,7 @@ programs "$WIN" "$WIN_RO" "$CL"
 programs "$WIN2022" "$WIN2022_RO" "$CLANG_CL"
 
 # msys
-programs "$UCRT64" "$UCRT_RO" "$GCC" "$REFL"
+programs "$UCRT64" "$UCRT_RO" "$GCC"
 programs "$UCRT64" "$UCRT_RO" "$CLANG"
 programs "$CLANGARM64" "$CLANGARM_RO" "$CLANG"
 

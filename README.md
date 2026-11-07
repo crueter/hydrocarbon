@@ -2,7 +2,7 @@
 
 Pure synchronous, self-contained C++23 HTTP and HTTPS 1.1 library.
 
-Contains code based off of [requests.h](https://github.com/danmig06/requests.h) and [cpp-httplib](https://github.com/yhirose/cpp-httplib).
+Contains code based off of [requests.h](https://github.com/danmig06/requests.h) and [cpp-httplib](https://github.com/yhirose/cpp-httplib). See [LICENSE](./LICENSE) and [COPYING](./COPYING.md).
 
 ## Features
 
@@ -17,9 +17,14 @@ Contains code based off of [requests.h](https://github.com/danmig06/requests.h) 
 ## Limitations
 
 - Support for URL encoding/decoding is planned.
+- Support for socket and R/W timeouts are planned.
 - Support for operating systems beyond Windows and UNIX-likes is not planned.
   - Technically, at a minimum, you only need C++23, OpenSSL, and some networking methods: `recv`, `send`, `getaddrinfo`, `socket`, and `connect`.
-- No disk I/O functionality
+- Support for disk I/O functionality is not planned.
+- IPv6 support is not planned.
+- Thread safety is not planned.
+- The HTTP redirect spec is not fully supported.
+- SIGPIPE isn't handled for HTTPS connections, usually this won't be an issue.
 
 ## Compiler Support
 
@@ -264,3 +269,13 @@ Where:
 - `reason` is the string status response, e.g. `OK` or `Not Found`.
 - `transferMode` is either `Chunked`, `Sized`, `UntilClose`, or `NoData`.
   - Usually you don't need to worry about this
+
+## Building/Testing
+
+Standard CMake and CTest.
+
+```cmake
+cmake -S . -B build -GNinja
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
