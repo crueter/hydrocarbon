@@ -13,6 +13,8 @@ set_target_properties(hydro::carbon PROPERTIES
     IMPORTED_CXX_MODULES_LINK_LIBRARIES "OpenSSL::SSL"
     INTERFACE_LINK_LIBRARIES "OpenSSL::SSL")
 
+target_compile_features(hydro::carbon INTERFACE cxx_std_23)
+
 # ccache and sccache do not play very nicely with modules
 # This will be removed eventually
 get_target_property(launcher hydro::carbon CXX_COMPILER_LAUNCHER)
