@@ -48,7 +48,7 @@ public:
         std::size_t pos = 0;
         while (pos < data.size()) {
             // skip leading & or ?
-            while (pos < data.size() && (str[pos] == '?' || data[pos] == '&'))
+            while (pos < data.size() && (data[pos] == '?' || data[pos] == '&'))
                 ++pos;
 
             if (pos >= data.size())
