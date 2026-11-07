@@ -39,22 +39,29 @@ static inline hydro::URL resolveLocation(const hydro::URL &url, std::string_view
 }
 
 // Downgrade POST/etc. to GET and remove body if the response code calls for such.
-static inline void modifyMethod(std::string &method, std::string &body, hydro::Status status,
+static inline void modifyMethod(std::string &method, std::string &body, hydro::Header &headers, hydro::Status status,
                                 bool preserve)
 {
+    const auto dropBody = [&]() {
+        body.clear();
+
+        headers.remove("content-length");
+        headers.remove("transfer-encoding");
+    };
+
     switch (status) {
     case hydro::Status::MovedPermanently:
     case hydro::Status::Found:
         // move to GET and clear body
         if (!preserve && method != "GET" && method != "HEAD") {
             method = "GET";
-            body.clear();
+            dropBody();
         }
         break;
     case hydro::Status::SeeOther:
         if (method != "HEAD") {
             method = "GET";
-            body.clear();
+            dropBody();
         }
         break;
     case hydro::Status::TemporaryRedirect:
@@ -122,8 +129,11 @@ std::expected<Response, Error> performOnce(Socket &s, std::string_view method, c
         headers.add("user-agent", "Hydrocarbon/0.1.0");
     }
 
+    // only send port if it's not the default
     if (!headers.contains("host")) {
-        headers.add("host", url.hostname);
+        const bool isDefault = (url.protocol == Protocol::HTTPS) ? url.port == 443 : url.port == 80;
+        headers.add("host",
+                    isDefault ? url.hostname : std::format("{}:{}", url.hostname, url.port));
     }
 
     if (!opts.body.empty() && !headers.contains("content-length")) {
@@ -180,7 +190,7 @@ std::expected<Response, Error> perform(std::string_view method, const URL &url,
         // handle redirects
         auto loc = r->headers.get("location");
         if (opts.redirect.follow && count < opts.redirect.maxRedirects && isRedirect(r->status_code) && loc.has_value()) {
-            modifyMethod(curMethod, curOpts.body, r->status_code, opts.redirect.preserveMethod);
+            modifyMethod(curMethod, curOpts.body, curOpts.headers, r->status_code, opts.redirect.preserveMethod);
 
             curUrl = resolveLocation(curUrl, loc.value());
             ++count;

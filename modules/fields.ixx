@@ -48,7 +48,7 @@ public:
         std::size_t pos = 0;
         while (pos < data.size()) {
             // skip leading & or ?
-            while (pos < data.size() && (str[pos] == '?' || data[pos] == '&'))
+            while (pos < data.size() && (data[pos] == '?' || data[pos] == '&'))
                 ++pos;
 
             if (pos >= data.size())
@@ -113,7 +113,7 @@ public:
         if (it == m_entries.end())
             return false;
 
-        return m_entries.erase(lower_key) == 1;
+        return m_entries.erase(lower_key) >= 1;
     }
 
     // Check if the headers contain the specified key.
@@ -193,6 +193,10 @@ public:
             (proto_end != std::string_view::npos) ? proto_end + 3 : 0;
         std::string_view remainder = url.substr(hostname_start);
 
+        // remove #fragment
+        if (auto hash = remainder.find('#'); hash != std::string_view::npos)
+            remainder = remainder.substr(0, hash);
+
         auto route_begin = remainder.find('/');
         auto params_begin = remainder.find('?');
 
@@ -226,14 +230,19 @@ public:
         // port
         auto colon = hostname.find(':');
         if (colon != std::string::npos) {
+            auto prev_port_str = port_str;
             port_str = std::string_view(hostname).substr(colon + 1);
             hostname = hostname.substr(0, colon);
 
             uint64_t t_port = 0;
             auto [ptr, ec] =
                 std::from_chars(port_str.data(), port_str.data() + port_str.size(), t_port);
-            if (ec == std::errc{} && t_port > 0 && t_port <= 65535) {
+            if (ec == std::errc{} && t_port > 0 && t_port <= 65535 &&
+                ptr == port_str.data() + port_str.size()) {
                 port = uint16_t(t_port);
+            } else {
+                // invalid port_str, restore to prev value
+                port_str = prev_port_str;
             }
         }
     }

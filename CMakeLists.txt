@@ -63,18 +63,18 @@ if (HYDROCARBON_INSTALL)
 
     include(CMakePackageConfigHelpers)
     configure_package_config_file(
-        "${CMAKE_SOURCE_DIR}/cmake/hydrocarbonConfig.cmake.in"
-        "${CMAKE_BINARY_DIR}/hydrocarbonConfig.cmake"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/hydrocarbonConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/hydrocarbonConfig.cmake"
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hydrocarbon)
 
     write_basic_package_version_file(
-        "${CMAKE_BINARY_DIR}/hydrocarbonConfigVersion.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/hydrocarbonConfigVersion.cmake"
         VERSION ${PROJECT_VERSION}
         COMPATIBILITY SameMajorVersion)
 
     install(FILES
-        "${CMAKE_BINARY_DIR}/hydrocarbonConfigVersion.cmake"
-        "${CMAKE_BINARY_DIR}/hydrocarbonConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/hydrocarbonConfigVersion.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/hydrocarbonConfig.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hydrocarbon)
 endif()
 

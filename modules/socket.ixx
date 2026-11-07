@@ -71,6 +71,15 @@ public:
     {
         if (!ctx) {
             ctx = SSL_CTX_new(TLS_client_method());
+            if (!ctx)
+                return false;
+
+            // use winstore if available
+#if defined(_WIN32) && OPENSSL_VERSION_PREREQ(3, 2)
+            return SSL_CTX_load_verify_store(ctx, "org.openssl.winstore://");
+#else
+            return SSL_CTX_set_default_verify_paths(ctx);
+#endif
         }
 
         return ctx != nullptr;
@@ -97,21 +106,31 @@ static void free_ssl(SSL *s)
     }
 }
 
+export void free_ctx(SSL_CTX *c) {
+    if (c) {
+        SSL_CTX_free(c);
+    }
+}
+
 }; // namespace hydro
 
 using RAII_SSL = std::unique_ptr<SSL, decltype(&hydro::free_ssl)>;
+using RAII_SSL_CTX = std::unique_ptr<SSL_CTX, decltype(&hydro::free_ctx)>;
 
 export namespace hydro
 {
 
 // headers bigger than this are concerning
-inline constexpr auto maxHeaderSize = 16384;
+inline constexpr std::size_t maxHeaderSize = 16384;
 
 // most reads
-inline constexpr auto defaultReadSize = 4096;
+inline constexpr std::size_t defaultReadSize = 4096;
 
 // headers, readLine
-inline constexpr auto shortReadSize = 1024;
+inline constexpr std::size_t shortReadSize = 1024;
+
+// chunks larger than this are dangerous
+inline constexpr std::size_t maxChunkSize = 1048576;
 
 // raii fd wrapper
 class FileDescriptor {
@@ -172,6 +191,7 @@ public:
 };
 
 class Socket : public FileDescriptor {
+    RAII_SSL_CTX m_ctx{nullptr, &free_ctx};
     SSL *m_ssl = nullptr;
     bool m_connected = false;
 
@@ -201,8 +221,13 @@ class Socket : public FileDescriptor {
     // SSL or insecure send.
     int64_t internal_send(char *buf, std::size_t n)
     {
-        if (!m_ssl)
+        if (!m_ssl) {
+#ifdef MSG_NOSIGNAL
+            return ::send(m_fd, buf, n, MSG_NOSIGNAL);
+#else
             return ::send(m_fd, buf, n, 0);
+#endif
+        }
 
         std::size_t total = 0;
         while (total < n) {
@@ -213,11 +238,11 @@ class Socket : public FileDescriptor {
 
             // ssl error
             else if (!BIO_should_retry(SSL_get_wbio(m_ssl))) {
-                break;
+                return -1;
             }
         }
 
-        return total;
+        return int64_t(total);
     }
 
     // whether a failed connect is merely in progress
@@ -294,12 +319,6 @@ public:
     Socket(const Socket &) = delete;
     Socket &operator=(const Socket &) = delete;
 
-    Socket(Socket &&other) noexcept
-        : FileDescriptor(std::move(other)), m_ssl(std::exchange(other.m_ssl, nullptr)),
-          m_connected(std::exchange(other.m_connected, false))
-    {
-    }
-
     // Whether or not this socket has made a connection yet.
     [[nodiscard]] bool connected() const
     {
@@ -330,16 +349,25 @@ public:
 
         FileDescriptor fd;
 
+        bool any_created = false;
         for (auto conn = hostinfo; conn != nullptr; conn = conn->ai_next) {
             int t_fd = socket(conn->ai_family, conn->ai_socktype, conn->ai_protocol);
             if (t_fd == -1)
                 continue;
 
+            // prevent sigpipe from obliterating the entire application
+#if !defined(MSG_NOSIGNAL) && !defined(_WIN32)
+            int on = 1;
+            setsockopt(t_fd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+#endif
+
+            any_created = true;
+
             auto ec = timed_connect(t_fd, conn->ai_addr, conn->ai_addrlen);
-            if (!ec) {
+            if (!ec && ec.error() == Error::Timeout) {
                 closesocket(t_fd);
                 return std::unexpected(ec.error());
-            } else if (ec.value()) {
+            } else if (ec && ec.value()) {
                 fd = t_fd;
                 break;
             }
@@ -349,7 +377,7 @@ public:
 
         if (!fd.isValid()) {
             freeaddrinfo(hostinfo);
-            return std::unexpected(Error::SocketCreate);
+            return std::unexpected(any_created ? Error::ConnectFailed : Error::SocketCreate);
         }
 
         freeaddrinfo(hostinfo);
@@ -362,17 +390,12 @@ public:
             }
 
             // setup
-            auto ctx = SSLContext::ssl_context().get();
-            if (!ctx) {
-                return std::unexpected(Error::TLSCtx);
-            }
-
-            ssl.reset(SSL_new(ctx));
-            if (!ssl) {
-                return std::unexpected(Error::TLSInit);
-            }
-
+            SSL_CTX *ctx;
             if (!opts.cert.empty()) {
+                m_ctx = RAII_SSL_CTX{SSL_CTX_new(TLS_client_method()), &free_ctx};
+                if (!m_ctx)
+                    return std::unexpected(Error::TLSCtx);
+
                 // read cert
                 BIO *bio = BIO_new_mem_buf(opts.cert.data(), opts.cert.size());
                 if (!bio) {
@@ -405,14 +428,18 @@ public:
                 sk_X509_INFO_pop_free(infos, X509_INFO_free);
                 BIO_free(bio);
 
-                SSL_CTX_set_cert_store(ctx, store);
+                SSL_CTX_set_cert_store(m_ctx.get(), store);
+                ctx = m_ctx.get();
             } else {
-// use winstore if available
-#if defined(_WIN32) && OPENSSL_VERSION_PREREQ(3, 2)
-                SSL_CTX_load_verify_store(ctx, "org.openssl.winstore://");
-#else
-                SSL_CTX_set_default_verify_paths(ctx);
-#endif
+                ctx = SSLContext::ssl_context().get();
+            }
+
+            if (!ctx)
+                return std::unexpected(Error::TLSCtx);
+
+            ssl.reset(SSL_new(ctx));
+            if (!ssl) {
+                return std::unexpected(Error::TLSInit);
             }
 
             SSL_set_fd(ssl.get(), fd);
@@ -462,9 +489,7 @@ public:
 
         while (bytes_left > 0) {
             int64_t sent = internal_send(formatted.data() + offset, bytes_left);
-            if (sent == 0)
-                break;
-            if (sent < 0)
+            if (sent <= 0)
                 return std::unexpected(Error::SendFailed);
 
             bytes_left -= sent;
@@ -491,18 +516,11 @@ public:
         return size;
     }
 
-    // Receive a single character.
-    int64_t recv(char &buffer)
-    {
-        auto size = internal_recv(&buffer, 1);
-        return size;
-    }
-
     // Sized transfer.
     std::expected<void, Error> readSized(Response &r, const UserCallback &cb)
     {
         std::size_t len = r.contentLength();
-        std::size_t read = r.body.size();
+        std::size_t read = (std::min)(r.body.size(), len);
 
         // cancel on false
         auto cb_res = cb({read, len - read, r.body.substr(0, read), len, r.status_code});
@@ -512,7 +530,7 @@ public:
         std::string buf;
 
         while (read < len) {
-            int64_t size = recv(buf, defaultReadSize);
+            int64_t size = recv(buf, (std::min)(defaultReadSize, len - read));
             if (size <= 0)
                 break;
 
@@ -562,7 +580,7 @@ public:
     std::expected<void, Error> readChunked(Response &r, const UserCallback &cb)
     {
         // length is unknown
-        std::size_t read = r.body.size();
+        std::size_t read = 0;
         std::string buf = r.body;
         bool finished = false;
 
@@ -624,6 +642,12 @@ public:
                 break;
             }
 
+            // chunk size is way too big, this is dangerous.
+            // TODO stream the rest rather than ending
+            if (size > maxChunkSize) {
+                return std::unexpected(Error::InvalidChunk);
+            }
+
             // now read (+2 for crlf)
             std::size_t target = size + 2;
             while (buf.size() < target) {
@@ -662,22 +686,41 @@ public:
     [[nodiscard]] std::expected<Response, Error> readHeaders()
     {
         std::string data;
-        std::string buf;
-        buf.resize(shortReadSize);
 
-        // Read until header block is complete.
-        while (recv(buf) > 0) {
-            data.append(buf);
-            if (data.find("\r\n\r\n") != std::string_view::npos)
-                break;
+        while (true) {
+            bool found = false;
 
-            // headers are gigantic, leave now before bad things happen.
-            if (data.size() > maxHeaderSize)
-                return std::unexpected(Error::HeaderTooBig);
+            std::string buf;
+            // Read until header block is complete.
+            while (recv(buf) > 0) {
+                data.append(buf);
+                if (data.find("\r\n\r\n") != std::string_view::npos) {
+                    found = true;
+                    break;
+                }
+
+                // headers are gigantic, leave now before bad things happen.
+                if (data.size() > maxHeaderSize)
+                    return std::unexpected(Error::HeaderTooBig);
+            }
+
+            // header term missing
+            if (!found) {
+                return std::unexpected(Error::ReadFailed);
+            }
+
+            auto r = Response{data};
+
+            // 1xx are interims
+            const auto code = std::to_underlying(r.status_code);
+            if (code >= 100 && code < 200) {
+                data = std::move(r.body);
+                continue;
+            }
+
+            // remaining body bytes will be left in the body field of the response
+            return r;
         }
-
-        // remaining body bytes will be left in the body field of the response
-        return Response{data};
     }
 
     // Read the headers and body in one shot.
