@@ -6,7 +6,7 @@
 import hydrocarbon;
 import tests;
 
-void test_head() {
+static void test_head() {
     const hydro::URL url = "https://httpbin.org/get?param1=value1&param2=value2";
     auto ec = hydro::head(url);
     tests::check_err("HEAD request succeeds", ec, hydro::Error::Success);

@@ -13,6 +13,7 @@ include(CompilerChecks)
 # options
 option(HYDROCARBON_BUILD_TESTS "Build Hydrocarbon's test application" ${PROJECT_IS_TOP_LEVEL})
 option(HYDROCARBON_INSTALL "Create a Hydrocarbon install target" ${PROJECT_IS_TOP_LEVEL})
+option(HYDROCARBON_STRICT_ERRORS "Enable strict compile error checks" ${PROJECT_IS_TOP_LEVEL})
 
 if (NOT DEFINED CMAKE_CXX_STANDARD OR "${CMAKE_CXX_STANDARD}" LESS "23")
     set(CMAKE_CXX_STANDARD 23)
@@ -41,6 +42,19 @@ target_link_libraries(hydrocarbon PUBLIC OpenSSL::SSL)
 if (WIN32)
     target_link_libraries(hydrocarbon PUBLIC ws2_32)
 endif()
+
+if (HYDROCARBON_STRICT_ERRORS)
+    if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(hydrocarbon PUBLIC
+            /W4 /WX /we4834 /wd4702)
+    else()
+        target_compile_options(hydrocarbon PUBLIC
+            -Werror=unused-result -Wextra -Werror -Wall
+            -Wno-c23-extensions -Wno-unused-command-line-argument
+            -Werror=missing-declarations)
+    endif()
+endif()
+
 
 add_library(hydro::carbon ALIAS hydrocarbon)
 

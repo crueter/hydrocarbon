@@ -7,7 +7,7 @@ import hydrocarbon;
 import tests;
 import jacinth;
 
-void test_options() {
+static void test_options() {
     const hydro::URL url = "https://httpbin.org/options";
 
     auto ec = hydro::options(url);

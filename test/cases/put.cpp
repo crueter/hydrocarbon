@@ -8,7 +8,7 @@ import hydrocarbon;
 import tests;
 import jacinth;
 
-void test_put() {
+static void test_put() {
     const hydro::URL url = "https://httpbin.org/put";
 
     hydro::RequestOptions opts;

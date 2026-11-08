@@ -10,7 +10,7 @@ import jacinth;
 
 // WARNING: this is pure AI slop, HTTP redirection is the worst written spec of all time.
 
-void test_status_codes()
+static void test_status_codes()
 {
     struct Case {
         const char *name;
@@ -45,7 +45,7 @@ void test_status_codes()
 
 // --- resolveLocation: absolute vs relative Location (httpbin /redirect-to) ----
 
-void test_redirect_relative()
+static void test_redirect_relative()
 {
     // Location = /get  -> stays on https://httpbin.org/get
     auto ec = hydro::get("https://httpbin.org/redirect-to?url=/get&status_code=302");
@@ -58,7 +58,7 @@ void test_redirect_relative()
     tests::check_match("relative -> url", doc.get<std::string>("url"), "https://httpbin.org/get");
 }
 
-void test_redirect_absolute()
+static void test_redirect_absolute()
 {
     // Location = http://httpbin.org/get  -> scheme/host come from the Location
     auto ec =
@@ -72,7 +72,7 @@ void test_redirect_absolute()
     tests::check_match("absolute -> url", doc.get<std::string>("url"), "http://httpbin.org/get");
 }
 
-void test_redirect_relative_chain()
+static void test_redirect_relative_chain()
 {
     // /relative-redirect/2 -> two relative hops then /get
     auto ec = hydro::get("https://httpbin.org/relative-redirect/2");
@@ -84,7 +84,7 @@ void test_redirect_relative_chain()
     tests::check_match("relative chain -> method", doc.get<std::string>("method"), "GET");
 }
 
-void test_redirect_absolute_chain()
+static void test_redirect_absolute_chain()
 {
     // /absolute-redirect/2 -> two absolute hops then /get
     auto ec = hydro::get("https://httpbin.org/absolute-redirect/2");
@@ -98,7 +98,7 @@ void test_redirect_absolute_chain()
 
 // --- method/body downgrading (httpbin /redirect-to?url=/post) -----------------
 
-void test_downgrade(const char *name, const char *target, const char *status_code, bool preserve,
+static void test_downgrade(const char *name, const char *target, const char *status_code, bool preserve,
                     const char *expect_method, const char *expect_data)
 {
     hydro::RequestOptions opts;
@@ -120,7 +120,7 @@ void test_downgrade(const char *name, const char *target, const char *status_cod
                        expect_data);
 }
 
-void test_downgrade_matrix()
+static void test_downgrade_matrix()
 {
     // 301/302: default downgrades POST->GET and drops the body;
     // preserveMethod=true keeps POST + body
@@ -136,7 +136,7 @@ void test_downgrade_matrix()
 
 // --- perform() loop controls -------------------------------------------------
 
-void test_redirect_follow_false()
+static void test_redirect_follow_false()
 {
     hydro::RequestOptions opts;
     opts.redirect.follow = false;
@@ -150,7 +150,7 @@ void test_redirect_follow_false()
     tests::check("follow=false keeps location header", ec->headers.contains("location"));
 }
 
-void test_redirect_max_limit()
+static void test_redirect_max_limit()
 {
     // /redirect/5 does 5 hops; with maxRedirects=1 we should stop on a 30x.
     hydro::RequestOptions opts;
@@ -166,7 +166,7 @@ void test_redirect_max_limit()
     tests::check("maxRedirects=1 keeps location header", ec->headers.contains("location"));
 }
 
-void test_redirect_default_reaches_target()
+static void test_redirect_default_reaches_target()
 {
     // /redirect/3 with the default maxRedirects=5 should reach /get (200).
     auto ec = hydro::get("https://httpbin.org/redirect/3");

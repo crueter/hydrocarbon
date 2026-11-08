@@ -6,7 +6,7 @@
 import hydrocarbon;
 import tests;
 
-void test_timeout() {
+static void test_timeout() {
     using namespace std::chrono_literals;
 
     hydro::RequestOptions opts;

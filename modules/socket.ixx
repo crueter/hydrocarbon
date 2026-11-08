@@ -106,7 +106,7 @@ static void free_ssl(SSL *s)
     }
 }
 
-export void free_ctx(SSL_CTX *c) {
+export inline void free_ctx(SSL_CTX *c) {
     if (c) {
         SSL_CTX_free(c);
     }
@@ -195,7 +195,7 @@ class Socket : public FileDescriptor {
     SSL *m_ssl = nullptr;
     bool m_connected = false;
 
-    std::chrono::milliseconds m_timeout;
+    // std::chrono::milliseconds m_timeout;
     std::chrono::milliseconds m_connectionTimeout;
 
     // SSL or insecure recv.
@@ -333,9 +333,14 @@ public:
         m_connectionTimeout = opts.connectionTimeout;
 
         struct addrinfo hints = {
+            .ai_flags = 0,
             .ai_family = AF_INET,
             .ai_socktype = SOCK_STREAM,
             .ai_protocol = IPPROTO_TCP,
+            .ai_addrlen = 0,
+            .ai_addr = nullptr,
+            .ai_canonname = nullptr,
+            .ai_next = nullptr,
         };
 
         struct addrinfo *hostinfo = nullptr;

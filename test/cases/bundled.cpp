@@ -8,7 +8,7 @@
 import hydrocarbon;
 import tests;
 
-void test_bundled_cert() {
+static void test_bundled_cert() {
     hydro::RequestOptions opts;
     opts.connect.cert = std::string{kCert};
 

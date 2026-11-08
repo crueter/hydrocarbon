@@ -10,7 +10,7 @@ import hydrocarbon;
 import tests;
 import jacinth;
 
-void test_http() {
+static void test_http() {
     const hydro::URL url = "http://httpbin.org/get?param1=value1&param2=value2";
     auto ec = hydro::get(url);
     tests::check_err("httpbin.org/get request succeeds", ec, hydro::Error::Success);
@@ -27,7 +27,7 @@ void test_http() {
     tests::check_match("param2", args.get<std::string>("param2"), "value2");
 }
 
-void test_get() {
+static void test_get() {
     const hydro::URL url = "https://httpbin.org/get?param1=value1&param2=value2";
     auto ec = hydro::get(url);
     tests::check_err("HTTPS httpbin.org/get request succeeds", ec, hydro::Error::Success);
@@ -44,7 +44,7 @@ void test_get() {
     tests::check_match("HTTPS param2", args.get<std::string>("param2"), "value2");
 }
 
-void test_drip() {
+static void test_drip() {
     std::string body;
     const auto func = [&body](const hydro::DownloadState &state) {
         std::println("Received {}/{} bytes ({} remaining)", state.bytes_received,
@@ -66,7 +66,7 @@ void test_drip() {
     tests::check_match("drip body size", body.size(), bytes);
 }
 
-void test_cancel() {
+static void test_cancel() {
     using namespace std::chrono_literals;
     using sc = std::chrono::steady_clock;
 

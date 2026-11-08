@@ -15,7 +15,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(CPMUtil)
 
 # tests use jacinth for json parsing
-AddJsonPackage(NAME jacinth)
+AddJsonPackage(jacinth)
 
 # test lib
 add_library(tests STATIC)
@@ -25,13 +25,16 @@ target_sources(tests PUBLIC
 
 target_link_libraries(tests PUBLIC hydro::carbon)
 
-if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(tests PUBLIC
-        /W4 /WX /we4834 /wd4702)
-else()
-    target_compile_options(tests PUBLIC
-        -Werror=unused-result -Wextra -Werror
-        -Wno-c23-extensions -Wno-unused-command-line-argument)
+if (HYDROCARBON_STRICT_ERRORS)
+    if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(tests PUBLIC
+            /W4 /WX /we4834 /wd4702)
+    else()
+        target_compile_options(tests PUBLIC
+            -Werror=unused-result -Wextra -Werror -Wall
+            -Wno-c23-extensions -Wno-unused-command-line-argument
+            -Werror=missing-declarations)
+    endif()
 endif()
 
 # need to link to stdc++exp (on glibc++ only) for std::print on mingw
