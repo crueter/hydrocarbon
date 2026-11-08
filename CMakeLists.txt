@@ -50,8 +50,9 @@ if (HYDROCARBON_STRICT_ERRORS)
     else()
         target_compile_options(hydrocarbon PRIVATE
             -Werror=unused-result -Wextra -Werror -Wall
-            -Wno-c23-extensions -Wno-unused-command-line-argument
-            -Werror=missing-declarations)
+            -Wno-unused-command-line-argument -Wpre-c++17-compat
+            -Werror=missing-declarations
+            -Wno-c++98-compat)
     endif()
 endif()
 
