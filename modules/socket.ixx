@@ -202,10 +202,10 @@ class Socket : public FileDescriptor {
     int64_t internal_recv(char *buf, std::size_t n)
     {
         if (!m_ssl)
-            return ::recv(m_fd, buf, n, 0);
+            return ::recv(m_fd, buf, int(n), 0);
 
         while (true) {
-            auto r = SSL_read(m_ssl, buf, n);
+            auto r = SSL_read(m_ssl, buf, int(n));
             if (r >= 0)
                 return r;
 
@@ -223,15 +223,15 @@ class Socket : public FileDescriptor {
     {
         if (!m_ssl) {
 #ifdef MSG_NOSIGNAL
-            return ::send(m_fd, buf, n, MSG_NOSIGNAL);
+            return ::send(m_fd, buf, int(n), MSG_NOSIGNAL);
 #else
-            return ::send(m_fd, buf, n, 0);
+            return ::send(m_fd, buf, int(n), 0);
 #endif
         }
 
         std::size_t total = 0;
         while (total < n) {
-            auto w = SSL_write(m_ssl, buf + total, n - total);
+            auto w = SSL_write(m_ssl, buf + total, int(n - total));
 
             if (w > 0)
                 total += w;
@@ -265,7 +265,7 @@ class Socket : public FileDescriptor {
         // I HATE WINDOWS!!!!!!!!!!!!!
         auto ms = m_connectionTimeout.count();
         timeval tv;
-        tv.tv_sec = ms / 1000;
+        tv.tv_sec = time_t(ms / 1000);
         tv.tv_usec = (ms % 1000) * 1000;
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
@@ -280,7 +280,11 @@ class Socket : public FileDescriptor {
         if (rc != 0 && connect_in_progress()) {
             fd_set wset;
             FD_ZERO(&wset);
+#if defined(_WIN32)
+            FD_SET(SOCKET(fd), &wset);
+#else
             FD_SET(fd, &wset);
+#endif
 
             int sel = select(fd + 1, nullptr, &wset, nullptr, &tv);
             if (sel == 0)
