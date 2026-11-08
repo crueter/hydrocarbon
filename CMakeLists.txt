@@ -52,7 +52,7 @@ if (HYDROCARBON_STRICT_ERRORS)
             -Werror=unused-result -Wextra -Werror -Wall
             -Wno-unused-command-line-argument -Wno-c++17-compat
             -Werror=missing-declarations
-            -Wno-c++98-compat)
+            -Wno-c++98-compat -Wno-c++98-compat-pedantic)
     endif()
 endif()
 

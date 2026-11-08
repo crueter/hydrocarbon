@@ -427,9 +427,10 @@ export {
             case hydro::Status::NetworkAuthenticationRequired:
                 name = "511 Network Authentication Required";
                 break;
-            default:
+            }
+
+            if (name.empty()) {
                 name = std::to_string(std::to_underlying(s));
-                break;
             }
 
             return std::formatter<std::string_view>::format(name, ctx);

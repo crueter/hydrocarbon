@@ -265,7 +265,7 @@ class Socket : public FileDescriptor {
         // I HATE WINDOWS!!!!!!!!!!!!!
         auto ms = m_connectionTimeout.count();
         timeval tv;
-        tv.tv_sec = time_t(ms / 1000);
+        tv.tv_sec = (long)(ms / 1000);
         tv.tv_usec = (ms % 1000) * 1000;
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
@@ -354,7 +354,7 @@ public:
 
         bool any_created = false;
         for (auto conn = hostinfo; conn != nullptr; conn = conn->ai_next) {
-            int t_fd = socket(conn->ai_family, conn->ai_socktype, conn->ai_protocol);
+            int t_fd = (int)socket(conn->ai_family, conn->ai_socktype, conn->ai_protocol);
             if (t_fd == -1)
                 continue;
 
@@ -366,7 +366,7 @@ public:
 
             any_created = true;
 
-            auto ec = timed_connect(t_fd, conn->ai_addr, conn->ai_addrlen);
+            auto ec = timed_connect(t_fd, conn->ai_addr, (socklen_t)conn->ai_addrlen);
             if (!ec && ec.error() == Error::Timeout) {
                 closesocket(t_fd);
                 return std::unexpected(ec.error());
@@ -400,7 +400,7 @@ public:
                     return std::unexpected(Error::TLSCtx);
 
                 // read cert
-                BIO *bio = BIO_new_mem_buf(opts.cert.data(), opts.cert.size());
+                BIO *bio = BIO_new_mem_buf(opts.cert.data(), (int)opts.cert.size());
                 if (!bio) {
                     return std::unexpected(Error::InvalidCert);
                 }
