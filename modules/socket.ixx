@@ -332,16 +332,10 @@ public:
         // m_timeout = opts.timeout;
         m_connectionTimeout = opts.connectionTimeout;
 
-        struct addrinfo hints = {
-            .ai_flags = 0,
-            .ai_family = AF_INET,
-            .ai_socktype = SOCK_STREAM,
-            .ai_protocol = IPPROTO_TCP,
-            .ai_addrlen = 0,
-            .ai_addr = nullptr,
-            .ai_canonname = nullptr,
-            .ai_next = nullptr,
-        };
+        struct addrinfo hints;
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
 
         struct addrinfo *hostinfo = nullptr;
         int err = getaddrinfo(url.hostname.c_str(), url.port_str.c_str(), &hints, &hostinfo);
