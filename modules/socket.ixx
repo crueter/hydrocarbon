@@ -280,7 +280,12 @@ class Socket : public FileDescriptor {
         if (rc != 0 && connect_in_progress()) {
             fd_set wset;
             FD_ZERO(&wset);
+
+#if defined(_WIN32)
+            FD_SET((SOCKET)fd, &wset);
+#else
             FD_SET(fd, &wset);
+#endif
 
             int sel = select(fd + 1, nullptr, &wset, nullptr, &tv);
             if (sel == 0)
