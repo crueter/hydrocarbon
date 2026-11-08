@@ -45,10 +45,10 @@ endif()
 
 if (HYDROCARBON_STRICT_ERRORS)
     if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(hydrocarbon PUBLIC
+        target_compile_options(hydrocarbon PRIVATE
             /W4 /WX /we4834 /wd4702)
     else()
-        target_compile_options(hydrocarbon PUBLIC
+        target_compile_options(hydrocarbon PRIVATE
             -Werror=unused-result -Wextra -Werror -Wall
             -Wno-c23-extensions -Wno-unused-command-line-argument
             -Werror=missing-declarations)
