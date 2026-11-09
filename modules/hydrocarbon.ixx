@@ -126,7 +126,7 @@ std::expected<Response, Error> performOnce(Socket &s, std::string_view method, c
 
     // default ua/host
     if (!headers.contains("user-agent")) {
-        headers.add("user-agent", "Hydrocarbon/0.1.0");
+        headers.add("user-agent", "Hydrocarbon/0.1.2");
     }
 
     // only send port if it's not the default

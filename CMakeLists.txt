@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.31)
 
-project(hydrocarbon VERSION 0.1.0 LANGUAGES CXX)
+project(hydrocarbon VERSION 0.1.2 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
